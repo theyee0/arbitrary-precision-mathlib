@@ -18,18 +18,21 @@
 
 typedef unsigned int __apml_unit;
 
+/* Structure representing fixed-point number */
 struct apml_struct {
-        int alloc;
-        int size;
+        int alloc;        /* Current memory allocated */
+        int size;         /* Current length of number */
 
-        int sign;
-        int base;
-        int scale;
-        __apml_unit *num;
+        int sign;         /* Sign, +1 or -1 */
+        int base;         /* Number base */
+        int scale;        /* Number of digits after decimal point */
+        __apml_unit *num; /* Actual data */
 };
 
+/* Typedef to abstract nature of fixed point numbers */
 typedef struct apml_struct* apml_t;
 
+/* If necessary, reallocate memory in apml_t to meet a minimum threshold */
 apml_t apml_realloc(apml_t r, const int n) {
         if (r->size < n) {
                 r->alloc = n;
@@ -43,6 +46,7 @@ apml_t apml_realloc(apml_t r, const int n) {
         return r;
 }
 
+/* Initialize number to default values and allocate 4 digits */
 apml_t apml_init(apml_t r, const int base) {
         r->alloc = 4;
         r->size = 1;
@@ -60,6 +64,7 @@ apml_t apml_init(apml_t r, const int base) {
         return r;
 }
 
+/* Destroy number and free its memory */
 apml_t apml_free(apml_t r) {
         r->alloc = 0;
         r->size = 0;
@@ -69,6 +74,7 @@ apml_t apml_free(apml_t r) {
         return r;
 }
 
+/* Change the number of digits after decimal point */
 apml_t apml_set_scale(apml_t r, const int scale) {
         int offset = scale - r->scale;
 
@@ -86,6 +92,7 @@ apml_t apml_set_scale(apml_t r, const int scale) {
         return r;
 }
 
+/* Create a copy of a number, but don't copy memory */
 apml_t apml_shallow_copy(apml_t r, const apml_t a) {
         r->scale = a->scale;
         r->size = a->size;
@@ -97,6 +104,18 @@ apml_t apml_shallow_copy(apml_t r, const apml_t a) {
         return r;
 }
 
+/* Create a full copy of a number */
+apml_t apml_copy(apml_t r, const apml_t a) {
+        apml_shallow_copy(r, a);
+
+        r->num = malloc(r->alloc * sizeof(*r->num));
+
+        memcpy(r->num, a->num, r->alloc * sizeof(*r->num));
+
+        return r;
+}
+
+/* Calculate a number, mod an integer */
 int apml_c_mod(const apml_t a, const int c) {
         int i;
         int m;
@@ -113,21 +132,26 @@ int apml_c_mod(const apml_t a, const int c) {
         return m;
 }
 
+apml_t apml_c_div_im(apml_t r, const int c) {
+        /* Not yet Implemented */
+        exit(1);
+}
+
 apml_t apml_c_div(apml_t r, const apml_t a, const int c) {
         /* Not yet Implemented */
         exit(1);
 }
 
-apml_t apml_c_mult(apml_t r, const apml_t a, const int c) {
+apml_t apml_c_mult_im(apml_t r, const int c) {
         int i;
         int carry = 0;
         long long tmp;
 
-        apml_realloc(r, a->size + 1);
+        apml_realloc(r, r->size + 1);
 
-        for (i = 0; i < a->size; i++) {
+        for (i = 0; i < r->size; i++) {
                 tmp = c;
-                tmp *= a->num[i];
+                tmp *= r->num[i];
                 tmp += carry;
 
                 r->num[i] = tmp % r->base;
@@ -141,9 +165,51 @@ apml_t apml_c_mult(apml_t r, const apml_t a, const int c) {
         return r;
 }
 
-apml_t apml_set_base(apml_t r, apml_t a, const int base) {
-        /* Not yet implemented */
-        return -1;
+apml_t apml_c_mult(apml_t r, const apml_t a, const int c) {
+        apml_copy(r, a);
+
+        return apml_c_mult_im(r, c);
+}
+
+apml_t apml_set_base(apml_t r, const apml_t a, const int base) {
+        int i, j, m;
+        apml_t t = malloc(sizeof(*t));
+        apml_t d = malloc(sizeof(*d));
+        long long tmp;
+
+        r->size = 0;
+        r->scale = a->scale;
+
+        /* Compute integer part */
+        for (i = a->scale; i < a->size; i++) {
+                m = 0;
+                tmp = 1;
+                for (j = i; j < a->size; j++) {
+                        m += ((a->num[j] % c) * (tmp % c)) % c; /* Calculate (a[i] * tmp) % c */
+                        tmp *= a->base;
+                        tmp %= base;
+                }
+
+                apml_realloc(r, r->size + r->scale + 1);
+                r->num[r->size++ + r->scale] = tmp;
+        }
+
+        d->scale = a->scale + 1; /* Higher scale to minimize roundoff error */
+        d_realloc(d, d->scale + 1);
+        d->size = d->scale + 1;
+        d->base = base;
+
+        /* Compute fractional component */
+        for (i = 0; i < a->scale; i++) {
+                d->num[d->size - 1] = a->num[i];
+                for (j = 0; j < a->scale - i - 1; j++) {
+                        apml_c_div_im(d, base);
+                }
+
+                apml_add_im(r, d);
+        }
+
+        return r;
 }
 
 int apml_cmp(const apml_t a, const apml_t b) {
@@ -201,66 +267,60 @@ int apml_cmp(const apml_t a, const apml_t b) {
         return 0;
 }
 
-apml_t apml_add(apml_t r, const apml_t a, const apml_t b) {
+apml_t apml_add_im(apml_t r, const apml_t a) {
         int i;
         int carry = 0;
         long long tmp;
 
-        struct apml_struct t;
-
-        if (a->base != b->base || a->scale != b->scale) {
+        if (r->base != a->base || r->scale != a->scale) {
                 return NULL;
         }
 
-        if (a->sign != b->sign) {
+        if (r->sign != a->sign) {
                 apml_shallow_copy(&t, b);
                 t.sign = a->sign;
 
-                return apml_sub(r, a, &t);
+                return apml_sub_im(r, a, &t);
         }
 
-        r->base = a->base;
-        r->sign = a->sign;
-        apml_set_scale(r, a->scale);
-        apml_reallocate(r, MAX(a->size, b->size) + 1);
+        apml_reallocate(r, MAX(r->size, a->size) + 1);
 
-        for (i = 0; i < MIN(a->size, b->size); i++) {
+        for (i = 0; i < MIN(r->size, a->size); i++) {
                 tmp = carry;
+                tmp += r->num[i];
                 tmp += a->num[i];
-                tmp += b->num[i];
 
                 r->num[i] = tmp % r->base;
                 carry = tmp / r->base;
         }
 
-        if (a->size > b->size) {
-                r->size = a->size;
-                for (i = b->size; i < a->size; i++) {
-                        tmp = carry;
-                        tmp += a->num[i];
-
-                        r->num[i] = tmp % r->base;
-                        carry = tmp / r->base;
-                }
+        if (r->size > a->size) {
+                r->num[a->size] += carry;
         } else {
-                r->size = b->size;
-                for (i = a->size; i < b->size; i++) {
+                for (i = r->size; i < a->size; i++) {
                         tmp = carry;
                         tmp += b->num[i];
 
                         r->num[i] = tmp % r->base;
                         carry = tmp / r->base;
                 }
-        }
 
-        if (carry > 0) {
-                r->num[r->size++] = carry;
+                r->size = a->size;
+
+                if (carry > 0) {
+                        r->num[r->size++] = carry;
+                }
         }
 
         return r;
 }
 
-apml_t apml_sub(apml_t r, const apml_t a, const apml_t b) {
+apml_t apml_add(apml_t r, const apml_t a, const apml_t b) {
+        apml_copy(r, a);
+        return apml_add_im(r, b);
+}
+
+apml_t apml_sub_im(apml_t r, const apml_t a) {
         int i;
         int carry = 0;
         long long tmp;
@@ -306,6 +366,12 @@ apml_t apml_sub(apml_t r, const apml_t a, const apml_t b) {
         }
 
         return r;
+}
+
+apml_t apml_sub(apml_t r, const apml_t a, const apml_t b) {
+        apml_copy(r, a);
+
+        return apml_sub_im(r, b);
 }
 
 apml_t apml_mult(apml_t r, apml_t a, apml_t b) {
