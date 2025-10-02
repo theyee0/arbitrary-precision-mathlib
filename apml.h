@@ -13,7 +13,7 @@
 #endif
 
 #ifndef MIN
-#define MAX(A, B) ((A) < (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
 #endif
 
 typedef unsigned int __apml_unit;
@@ -32,11 +32,33 @@ struct apml_struct {
 /* Typedef to abstract nature of fixed point numbers */
 typedef struct apml_struct* apml_t;
 
+apml_t apml_realloc(apml_t r, const int n);
+apml_t apml_init(apml_t r, const int base);
+apml_t apml_free(apml_t r);
+apml_t apml_fromstr(apml_t r, const int base, const char *s);
+char *apml_tostr(apml_t r, char **s);
+apml_t apml_set_scale(apml_t r, const int scale);
+apml_t apml_shallow_copy(apml_t r, const apml_t a);
+apml_t apml_copy(apml_t r, const apml_t a);
+int apml_c_mod(const apml_t a, const int c);
+apml_t apml_c_div_im(apml_t r, const int c);
+apml_t apml_c_div(apml_t r, const apml_t a, const int c);
+apml_t apml_c_mult_im(apml_t r, const int c);
+apml_t apml_c_mult(apml_t r, const apml_t a, const int c);
+apml_t apml_set_base(apml_t r, const apml_t a, const int base);
+int apml_cmp(const apml_t a, const apml_t b);
+apml_t apml_add_im(apml_t r, const apml_t a);
+apml_t apml_add(apml_t r, const apml_t a, const apml_t b);
+apml_t apml_sub_im(apml_t r, const apml_t a);
+apml_t apml_sub(apml_t r, const apml_t a, const apml_t b);
+apml_t apml_mult(apml_t r, apml_t a, apml_t b);
+apml_t apml_div(apml_t r, apml_t a, apml_t b);
+
 /* If necessary, reallocate memory in apml_t to meet a minimum threshold */
 apml_t apml_realloc(apml_t r, const int n) {
         if (r->size < n) {
                 r->alloc = n;
-                r->num = realloc(n * sizeof(*r->num));
+                r->num = realloc(r->num, n * sizeof(*r->num));
         }
 
         if (r->num == NULL) {
@@ -49,7 +71,7 @@ apml_t apml_realloc(apml_t r, const int n) {
 /* Initialize number to default values and allocate 4 digits */
 apml_t apml_init(apml_t r, const int base) {
         r->alloc = 4;
-        r->size = 1;
+        r->size = 0;
         r->sign = 1;
         r->base = base;
         r->scale = 0;
@@ -72,6 +94,43 @@ apml_t apml_free(apml_t r) {
         r->num = NULL;
 
         return r;
+}
+
+/* Set r based on a given string (base <= 10) */
+apml_t apml_fromstr(apml_t r, const int base, const char *s) {
+        int i;
+        int l = strlen(s);
+        int scale = (int)(strchr(s, '.') - s);
+
+        apml_realloc(r, l);
+        apml_set_scale(r, scale);
+        r->base = base;
+
+        for (i = 0; i < l; i++) {
+                if (strchr("123456789", s[i]) != NULL) {
+                        r->num[r->size++] = s[i] - '0';
+                }
+        }
+
+        return r;
+}
+
+/* Set r based on a given string (base <= 10) */
+char *apml_tostr(apml_t r, char **s) {
+        int i;
+        int l = 0;
+
+        *s = malloc((r->size + 1) * sizeof(**s));
+
+        for (i = r->size - 1; i >= 0; i++) {
+                (*s)[l++] = r->num[i] + '0';
+
+                if (i == r->scale) {
+                        (*s)[l++] = '.';
+                }
+        }
+
+        return *s;
 }
 
 /* Change the number of digits after decimal point */
@@ -185,7 +244,7 @@ apml_t apml_set_base(apml_t r, const apml_t a, const int base) {
                 m = 0;
                 tmp = 1;
                 for (j = i; j < a->size; j++) {
-                        m += ((a->num[j] % c) * (tmp % c)) % c; /* Calculate (a[i] * tmp) % c */
+                        m += ((a->num[j] % base) * (tmp % base)) % base; /* Calculate (a[i] * tmp) % c */
                         tmp *= a->base;
                         tmp %= base;
                 }
@@ -195,7 +254,7 @@ apml_t apml_set_base(apml_t r, const apml_t a, const int base) {
         }
 
         d->scale = a->scale + 1; /* Higher scale to minimize roundoff error */
-        d_realloc(d, d->scale + 1);
+        apml_realloc(d, d->scale + 1);
         d->size = d->scale + 1;
         d->base = base;
 
@@ -272,18 +331,26 @@ apml_t apml_add_im(apml_t r, const apml_t a) {
         int carry = 0;
         long long tmp;
 
+        apml_t t = malloc(sizeof(*t));
+
         if (r->base != a->base || r->scale != a->scale) {
                 return NULL;
         }
 
         if (r->sign != a->sign) {
-                apml_shallow_copy(&t, b);
-                t.sign = a->sign;
+                apml_shallow_copy(t, a);
+                t->sign = a->sign;
 
-                return apml_sub_im(r, a, &t);
+                if (apml_sub_im(r, t)) {
+                        apml_free(t);
+                        return r;
+                } else {
+                        apml_free(t);
+                        return NULL;
+                }
         }
 
-        apml_reallocate(r, MAX(r->size, a->size) + 1);
+        apml_realloc(r, MAX(r->size, a->size) + 1);
 
         for (i = 0; i < MIN(r->size, a->size); i++) {
                 tmp = carry;
@@ -299,7 +366,7 @@ apml_t apml_add_im(apml_t r, const apml_t a) {
         } else {
                 for (i = r->size; i < a->size; i++) {
                         tmp = carry;
-                        tmp += b->num[i];
+                        tmp += a->num[i];
 
                         r->num[i] = tmp % r->base;
                         carry = tmp / r->base;
@@ -320,32 +387,38 @@ apml_t apml_add(apml_t r, const apml_t a, const apml_t b) {
         return apml_add_im(r, b);
 }
 
+/* TODO: Fix */
 apml_t apml_sub_im(apml_t r, const apml_t a) {
         int i;
         int carry = 0;
         long long tmp;
+        apml_t t = malloc(sizeof(*t));
 
-        struct apml_struct t;
-
-        if (a->base != b->base || a->scale != b->scale) {
+        if (r->base != a->base || r->scale != a->scale) {
                 return NULL;
         }
 
-        if (a->sign != b->sign) {
-                apml_shallow_copy(&t, b);
-                t.sign = a->sign;
+        if (r->sign != a->sign) {
+                apml_shallow_copy(t, a);
+                t->sign = a->sign;
 
-                return apml_add(r, a, &t);
+                if (apml_add_im(r, t)) {
+                        apml_free(t);
+                        return r;
+                } else {
+                        apml_free(t);
+                        return NULL;
+                }
         }
 
-        apml_realloc(r, MAX(a->size, b->size));
+        apml_realloc(r, MAX(a->size, r->size));
         r->base = a->base;
 
-        if (apml_cmp(a, b) < 0) {
-                apml_sub(r, b, a);
+        if (apml_cmp(r, a) < 0) {
+                exit(1);
         } else {
-                for (i = 0; i < MIN(a->size, b->size); i++) {
-                        r->num[i] = a->num[i] - b->num[i] - carry;
+                for (i = 0; i < MIN(a->size, r->size); i++) {
+                        r->num[i] = a->num[i] - r->num[i] - carry;
                         if (r->num[i] < 0) {
                                 r->num[i] += r->base;
                                 carry = 1;
@@ -375,11 +448,11 @@ apml_t apml_sub(apml_t r, const apml_t a, const apml_t b) {
 }
 
 apml_t apml_mult(apml_t r, apml_t a, apml_t b) {
-        return -1;
+        return NULL;
 }
 
 apml_t apml_div(apml_t r, apml_t a, apml_t b) {
-        return -1;
+        return NULL;
 }
 
 #endif
