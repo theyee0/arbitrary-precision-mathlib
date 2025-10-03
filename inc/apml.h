@@ -169,11 +169,13 @@ apml_t apml_shallow_copy(apml_t r, const apml_t a) {
 
 /* Create a full copy of a number */
 apml_t apml_copy(apml_t r, const apml_t a) {
-        apml_shallow_copy(r, a);
+        r->scale = a->scale;
+        r->size = a->size;
+        r->sign = a->sign;
 
-        r->num = malloc(r->alloc * sizeof(*r->num));
+        apml_realloc(r, a->alloc);
 
-        memcpy(r->num, a->num, r->alloc * sizeof(*r->num));
+        memcpy(r->num, a->num, a->alloc * sizeof(*r->num));
 
         return r;
 }
@@ -337,21 +339,24 @@ apml_t apml_add_im(apml_t r, const apml_t a) {
         int carry = 0;
         int tmp;
 
-        apml_t t = malloc(sizeof(*t));
+        apml_t t = NULL;
 
         if (r->base != a->base || r->scale != a->scale) {
                 return NULL;
         }
 
         if (r->sign != a->sign) {
+                t = malloc(sizeof(*t));
                 apml_shallow_copy(t, a);
                 t->sign = a->sign;
 
                 if (apml_sub_im(r, t)) {
                         apml_free(t);
+                        free(t);
                         return r;
                 } else {
                         apml_free(t);
+                        free(t);
                         return NULL;
                 }
         }
@@ -368,7 +373,14 @@ apml_t apml_add_im(apml_t r, const apml_t a) {
         }
 
         if (r->size > a->size) {
-                r->num[a->size] += carry;
+                i = a->size;
+                while (carry > 0) {
+                        r->num[i] += carry;
+                        carry = r->num[i] / r->base;
+                        r->num[i] %= r->base;
+                }
+
+                r->size = MAX(i + 1, r->size);
         } else {
                 for (i = r->size; i < a->size; i++) {
                         tmp = carry;
@@ -398,21 +410,24 @@ apml_t apml_sub_im(apml_t r, const apml_t a) {
         int i;
         int carry = 0;
         int tmp;
-        apml_t t = malloc(sizeof(*t));
+        apml_t t = NULL;
 
         if (r->base != a->base || r->scale != a->scale) {
                 return NULL;
         }
 
         if (r->sign != a->sign) {
+                t = malloc(sizeof(*t));
                 apml_shallow_copy(t, a);
                 t->sign = a->sign;
 
                 if (apml_add_im(r, t)) {
                         apml_free(t);
+                        free(t);
                         return r;
                 } else {
                         apml_free(t);
+                        free(t);
                         return NULL;
                 }
         }

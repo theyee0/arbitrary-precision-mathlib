@@ -34,12 +34,17 @@ int test_div_im_02();
 
 
 int main(void) {
-        assert("fromstr" && test_fromstr_01());
-        assert("fromstr" && test_fromstr_02());
+        assert("fromstr_01" && test_fromstr_01());
+        assert("fromstr_02" && test_fromstr_02());
 
-        assert("tostr" && test_tostr_01());
-        assert("tostr" && test_tostr_02());
+        assert("tostr_01" && test_tostr_01());
+        assert("tostr_02" && test_tostr_02());
 
+        assert("add_im_01" && test_add_im_01());
+        assert("add_im_02" && test_add_im_02());
+
+        assert("add_01" && test_add_01());
+        assert("add_02" && test_add_02());
 
         printf("All tests completed successfully.\n");
         return 0;
@@ -156,4 +161,100 @@ int test_tostr_02() {
         free(b);
 
         return successful;
+}
+
+int test_add_im_template(const char *n1, const char *n2, const char *expected, int base) {
+        int successful;
+
+        apml_t r = malloc(sizeof(*r));
+        apml_t a = malloc(sizeof(*a));
+
+        char *s;
+
+        apml_init(r, base);
+        apml_init(a, base);
+
+        apml_fromstr(r, base, n1);
+        apml_fromstr(a, base, n2);
+
+        apml_add_im(r, a);
+
+        successful = strcmp(expected, apml_tostr(r, &s)) == 0;
+
+        apml_free(r);
+        free(r);
+        apml_free(a);
+        free(a);
+
+        free(s);
+
+        return successful;
+}
+
+int test_add_im_01() {
+        const char *n1 = "1243214.213414";
+        const char *n2 = "1314154.231114";
+        const char *expected = "3001412.444532";
+        const int base = 6;
+
+        return test_add_im_template(n1, n2, expected, base);
+}
+
+int test_add_im_02() {
+        const char *n1 = "92522131112313412.213241";
+        const char *n2 = "1314154.231114";
+        const char *expected = "92522131113627566.444355";
+        const int base = 10;
+
+        return test_add_im_template(n1, n2, expected, base);
+}
+
+int test_add_template(const char *n1, const char *n2, const char *expected, int base) {
+        int successful;
+
+        apml_t r = malloc(sizeof(*r));
+        apml_t a = malloc(sizeof(*a));
+        apml_t b = malloc(sizeof(*b));
+
+        char *s;
+
+        apml_init(r, base);
+        apml_init(a, base);
+        apml_init(b, base);
+
+        apml_fromstr(a, base, n1);
+        apml_fromstr(b, base, n2);
+
+        apml_add(r, a, b);
+
+        successful = strcmp(expected, apml_tostr(r, &s)) == 0;
+
+        apml_free(r);
+        free(r);
+        apml_free(a);
+        free(a);
+        apml_free(b);
+        free(b);
+
+        free(s);
+
+        return successful;
+}
+
+int test_add_01() {
+        const char *n1 = "1243214.213414";
+        const char *n2 = "1314154.231114";
+        const char *expected = "3001412.444532";
+        const int base = 6;
+
+        return test_add_template(n1, n2, expected, base);
+}
+
+int test_add_02() {
+        const char *n1 = "92522131112313412.213241";
+        const char *n2 = "1314154.231114";
+        const char *expected = "92522131113627566.444355";
+        const int base = 10;
+
+        return test_add_template(n1, n2, expected, base);
 }
