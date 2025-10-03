@@ -56,7 +56,7 @@ apml_t apml_div(apml_t r, apml_t a, apml_t b);
 
 /* If necessary, reallocate memory in apml_t to meet a minimum threshold */
 apml_t apml_realloc(apml_t r, const int n) {
-        if (r->size < n) {
+        if (r->alloc < n) {
                 r->alloc = n;
                 r->num = realloc(r->num, n * sizeof(*r->num));
         }
@@ -75,6 +75,7 @@ apml_t apml_init(apml_t r, const int base) {
         r->sign = 1;
         r->base = base;
         r->scale = 0;
+
         r->num = malloc(r->alloc * sizeof(*r->num));
 
         if (r->num == NULL) {
@@ -100,14 +101,15 @@ apml_t apml_free(apml_t r) {
 apml_t apml_fromstr(apml_t r, const int base, const char *s) {
         int i;
         int l = strlen(s);
-        int scale = (int)(strchr(s, '.') - s);
+        int scale = l - (int)(strchr(s, '.') - s) - 1;
 
         apml_realloc(r, l);
         apml_set_scale(r, scale);
         r->base = base;
+        r->size = 0;
 
-        for (i = 0; i < l; i++) {
-                if (strchr("123456789", s[i]) != NULL) {
+        for (i = l - 1; i >= 0; i--) {
+                if (strchr("1234567890", s[i]) != NULL) {
                         r->num[r->size++] = s[i] - '0';
                 }
         }
@@ -120,15 +122,17 @@ char *apml_tostr(apml_t r, char **s) {
         int i;
         int l = 0;
 
-        *s = malloc((r->size + 1) * sizeof(**s));
+        *s = malloc((r->size + 2) * sizeof(**s));
 
-        for (i = r->size - 1; i >= 0; i++) {
+        for (i = r->size - 1; i >= 0; i--) {
                 (*s)[l++] = r->num[i] + '0';
 
                 if (i == r->scale) {
                         (*s)[l++] = '.';
                 }
         }
+
+        (*s)[l] = '\0';
 
         return *s;
 }
@@ -193,18 +197,20 @@ int apml_c_mod(const apml_t a, const int c) {
 
 apml_t apml_c_div_im(apml_t r, const int c) {
         /* Not yet Implemented */
+        printf("%p %d\n", (void*)r, c);
         exit(1);
 }
 
 apml_t apml_c_div(apml_t r, const apml_t a, const int c) {
         /* Not yet Implemented */
+        printf("%p %p %d\n", (void*)r, (void*)a, c);
         exit(1);
 }
 
 apml_t apml_c_mult_im(apml_t r, const int c) {
         int i;
         int carry = 0;
-        long long tmp;
+        int tmp;
 
         apml_realloc(r, r->size + 1);
 
@@ -234,7 +240,7 @@ apml_t apml_set_base(apml_t r, const apml_t a, const int base) {
         int i, j, m;
         apml_t t = malloc(sizeof(*t));
         apml_t d = malloc(sizeof(*d));
-        long long tmp;
+        int tmp;
 
         r->size = 0;
         r->scale = a->scale;
@@ -329,7 +335,7 @@ int apml_cmp(const apml_t a, const apml_t b) {
 apml_t apml_add_im(apml_t r, const apml_t a) {
         int i;
         int carry = 0;
-        long long tmp;
+        int tmp;
 
         apml_t t = malloc(sizeof(*t));
 
@@ -391,7 +397,7 @@ apml_t apml_add(apml_t r, const apml_t a, const apml_t b) {
 apml_t apml_sub_im(apml_t r, const apml_t a) {
         int i;
         int carry = 0;
-        long long tmp;
+        int tmp;
         apml_t t = malloc(sizeof(*t));
 
         if (r->base != a->base || r->scale != a->scale) {
@@ -418,23 +424,27 @@ apml_t apml_sub_im(apml_t r, const apml_t a) {
                 exit(1);
         } else {
                 for (i = 0; i < MIN(a->size, r->size); i++) {
-                        r->num[i] = a->num[i] - r->num[i] - carry;
-                        if (r->num[i] < 0) {
-                                r->num[i] += r->base;
+                        tmp = r->num[i] - a->num[i] - carry;
+                        if (tmp < 0) {
+                                tmp += r->base;
                                 carry = 1;
                         } else {
                                 carry = 0;
                         }
+
+                        r->num[i] = tmp;
                 }
 
                 while (carry > 0) {
-                        r->num[i] = a->num[i] - carry;
-                        if (r->num[i] < 0) {
-                                r->num[i] += r->base;
+                        tmp = r->num[i] - carry;
+                        if (tmp < 0) {
+                                tmp += r->base;
                                 carry = 1;
                         } else {
                                 carry = 0;
                         }
+
+                        r->num[i] = tmp;
                 }
         }
 
@@ -448,10 +458,12 @@ apml_t apml_sub(apml_t r, const apml_t a, const apml_t b) {
 }
 
 apml_t apml_mult(apml_t r, apml_t a, apml_t b) {
+        printf("%p %p %p\n", (void*)r, (void*)a, (void*)b);
         return NULL;
 }
 
 apml_t apml_div(apml_t r, apml_t a, apml_t b) {
+        printf("%p %p %p\n", (void*)r, (void*)a, (void*)b);
         return NULL;
 }
 
