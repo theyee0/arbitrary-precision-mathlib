@@ -16,6 +16,7 @@
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #endif
 
+/* Underlying type of each apml "cell" */
 typedef unsigned int __apml_unit;
 
 /* Structure representing fixed-point number */
@@ -32,27 +33,35 @@ struct apml_struct {
 /* Typedef to abstract nature of fixed point numbers */
 typedef struct apml_struct* apml_t;
 
-apml_t apml_realloc(apml_t r, const int n);
-apml_t apml_init(apml_t r, const int base);
-apml_t apml_free(apml_t r);
-apml_t apml_fromstr(apml_t r, const int base, const char *s);
-char *apml_tostr(apml_t r, char **s);
-apml_t apml_set_scale(apml_t r, const int scale);
-apml_t apml_shallow_copy(apml_t r, const apml_t a);
-apml_t apml_copy(apml_t r, const apml_t a);
-int apml_c_mod(const apml_t a, const int c);
-apml_t apml_c_div_im(apml_t r, const int c);
-apml_t apml_c_div(apml_t r, const apml_t a, const int c);
-apml_t apml_c_mult_im(apml_t r, const int c);
-apml_t apml_c_mult(apml_t r, const apml_t a, const int c);
-apml_t apml_set_base(apml_t r, const apml_t a, const int base);
-int apml_cmp(const apml_t a, const apml_t b);
-apml_t apml_add_im(apml_t r, const apml_t a);
-apml_t apml_add(apml_t r, const apml_t a, const apml_t b);
-apml_t apml_sub_im(apml_t r, const apml_t a);
-apml_t apml_sub(apml_t r, const apml_t a, const apml_t b);
-apml_t apml_mult(apml_t r, apml_t a, apml_t b);
-apml_t apml_div(apml_t r, apml_t a, apml_t b);
+/* Initialization/memory management functions */
+apml_t  apml_realloc(apml_t r, const int n);
+apml_t  apml_init(apml_t r, const int base);
+apml_t  apml_free(apml_t r);
+/* Export and import for testing */
+apml_t  apml_fromstr(apml_t r, const int base, const char *s);
+char   *apml_tostr(apml_t r, char **s);
+/* Copy functions */
+apml_t  apml_shallow_copy(apml_t r, const apml_t a);
+apml_t  apml_copy(apml_t r, const apml_t a);
+/* Change number settings */
+apml_t  apml_set_scale(apml_t r, const int scale);
+apml_t  apml_set_base(apml_t r, const apml_t a, const int base);
+/* Constant operations */
+int     apml_c_mod(const apml_t a, const int c);
+apml_t  apml_c_div_im(apml_t r, const int c);
+apml_t  apml_c_div(apml_t r, const apml_t a, const int c);
+apml_t  apml_c_mult_im(apml_t r, const int c);
+apml_t  apml_c_mult(apml_t r, const apml_t a, const int c);
+/* Fixed point operations */
+int     apml_cmp(const apml_t a, const apml_t b);
+apml_t  apml_add_im(apml_t r, const apml_t a);
+apml_t  apml_add(apml_t r, const apml_t a, const apml_t b);
+apml_t  apml_sub_im(apml_t r, const apml_t a);
+apml_t  apml_sub(apml_t r, const apml_t a, const apml_t b);
+apml_t  apml_mult(apml_t r, const apml_t a, const apml_t b);
+apml_t  apml_mult_im(apml_t r, const apml_t a);
+apml_t  apml_div(apml_t r, const apml_t a, const apml_t b);
+apml_t  apml_div_im(apml_t r, const apml_t a);
 
 /* If necessary, reallocate memory in apml_t to meet a minimum threshold */
 apml_t apml_realloc(apml_t r, const int n) {
