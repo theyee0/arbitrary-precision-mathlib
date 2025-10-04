@@ -436,7 +436,21 @@ apml_t apml_sub_im(apml_t r, const apml_t a) {
         r->base = a->base;
 
         if (apml_cmp(r, a) < 0) {
-                exit(1);
+                t = malloc(sizeof(*t));
+                apml_init(t, r->base);
+                apml_copy(t, r);
+                apml_copy(r, a);
+
+                if (apml_sub_im(r, t)) {
+                        r->sign *= -1;
+                        apml_free(t);
+                        free(t);
+                        return r;
+                } else {
+                        apml_free(t);
+                        free(t);
+                        return NULL;
+                }
         } else {
                 for (i = 0; i < MIN(a->size, r->size); i++) {
                         tmp = r->num[i] - a->num[i] - carry;
