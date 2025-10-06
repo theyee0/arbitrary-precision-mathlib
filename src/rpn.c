@@ -17,7 +17,7 @@ int main(void) {
         apml_init(b, 10);
 
         do {
-                printf("--------------Stack Entries----------\n");
+                printf("\n\n\n-------------Stack Entries-----------\n");
                 for (i = 0; i < n; i++) {
                         printf("%s\n", stack[i]);
                 }
