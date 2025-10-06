@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <assert.h>
 
 #ifndef apml_h_oom
 #define apml_h_oom() exit(-1)
@@ -112,7 +114,11 @@ apml_t apml_free(apml_t r) {
 apml_t apml_fromstr(apml_t r, const int base, const char *s) {
         int i;
         int l = strlen(s);
-        int scale = l - (int)(strchr(s, '.') - s) - 1; /* Scale of `s` */
+        int scale;
+
+        assert(strchr(s, '.') != NULL);
+
+        scale = l - (int)(strchr(s, '.') - s) - 1; /* Scale of `s` */
 
         /* If invalid base provided */
         if (base < 1 || 10 < base) {
