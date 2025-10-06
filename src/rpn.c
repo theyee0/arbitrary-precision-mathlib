@@ -41,14 +41,14 @@ int main(void) {
                         printf("%s\n", s);
                         free(s);
                 } else if (input[0] == '-') {
-                        b = apml_fromstr(a, 10, stack[--n]);
-                        a = apml_fromstr(b, 10, stack[--n]);
+                        b = apml_fromstr(b, 10, stack[--n]);
+                        a = apml_fromstr(a, 10, stack[--n]);
 
                         if (a == NULL || b == NULL) {
                                 printf("Invalid entry found!\n");
                         }
 
-                        apml_add_im(a, b);
+                        apml_sub_im(a, b);
                         apml_tostr(a, &s);
 
                         strcpy(stack[n++], s);
