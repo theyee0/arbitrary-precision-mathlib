@@ -551,6 +551,10 @@ apml_t apml_sub_im(apml_t r, const apml_t a) {
                 }
         }
 
+	while (r->size > r->scale + 1 && r->num[r->size - 1] == 0) {
+		r->size--;
+	}
+
         return r;
 }
 
