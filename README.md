@@ -3,6 +3,12 @@ Math Library supporting arbitrary precision computation in any natural number ba
 
 ## Usage
 ### Demo
+
+
+https://github.com/user-attachments/assets/b0215170-b5b7-4479-b82e-9a4044ddaffb
+
+
+
 A demo of the calculations is provided in `src/rpn.c`, which implements an rpn calculator that can add or subtract. It can be built with
 ```
 gcc -g -Iinc src/rpn.c -o rpn
@@ -26,8 +32,8 @@ Then, you should be able to access all the definitions from the file.
 #### Quickstart
 This is not a full listing of all the functions implemented, only the basic ones you really need to get started.
 
-`apml_t` represents a pointer to the number object. It's implemented as a typedef to a pointer to the struct that represents the number. As it's a pointer, you will need to allocate memory, potentially like `apml_t num = malloc(sizeof(*num))`.
-`apml_init()` can be used to initialize an `apml_t` object. Provide the `apml_t` object and the base, and the function will initialize the `apml_t`
-`apml_realloc()` can be used to allocate more memory for an `apml_t` object. The amount of memory is given as number of new entries, not the number of bytes.
-`apml_add_im()` can be used to add two numbers. The result will be stored in the first number you pass to it.
-`apml_sub_im()` is similar to `apml_add_im()`, except that it performs subtraction rather than addition.
+- `apml_t` represents a pointer to the number object. It's implemented as a typedef to a pointer to the struct that represents the number. As it's a pointer, you will need to allocate memory, potentially like `apml_t num = malloc(sizeof(*num))`.
+- `apml_init()` can be used to initialize an `apml_t` object. Provide the `apml_t` object and the base, and the function will initialize the `apml_t`
+- `apml_realloc()` can be used to allocate more memory for an `apml_t` object. The amount of memory is given as number of new entries, not the number of bytes.
+- `apml_add_im()` can be used to add two numbers. The result will be stored in the first number you pass to it.
+- `apml_sub_im()` is similar to `apml_add_im()`, except that it performs subtraction rather than addition.
